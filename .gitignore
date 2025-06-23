@@ -1,3 +1,8 @@
 __py__cache__/
 .venv/
 .env
+*.ipynb
+roadmap.docx
+*.pbix
+*.csv
+*.duckdb

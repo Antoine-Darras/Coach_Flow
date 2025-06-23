@@ -23,6 +23,7 @@ def connect_to_garmin():
         client = Garmin(EMAIL, PASSWORD)
         client.login()
         print("Connexion réussie à Garmin Connect.")
+        return client  # Retourne le client connecté pour une utilisation ultérieure
 
     except GarminConnectConnectionError:
         print(
