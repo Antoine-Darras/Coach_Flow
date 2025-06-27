@@ -97,9 +97,9 @@ with col3:
     avg_duration_str = format_duration_hhmmss(avg_duration)
     st.metric("Moyenne", avg_duration_str)
 
-###################################
+###################################################################################################################################
 # Visualisation des performances
-""" Distance selon semaines"""
+
 df_weekly = (
     df_filtered.set_index("start_date")
     .resample("W")  # 'W' = weekly, fin de semaine (dimanche)
@@ -118,7 +118,7 @@ fig = px.line(
 st.subheader("Distance parcourue au fil du temps")
 st.plotly_chart(fig, use_container_width=True)
 
-""" Durée selon semaines"""
+# Durée selon semaines ##############################################
 df_weekly_duration = (
     df_filtered.set_index("start_date")
     .resample("W")
@@ -142,14 +142,78 @@ fig = px.line(
 
 st.subheader("Durée d'activité au fil du temps")
 st.plotly_chart(fig, use_container_width=True)
-""" Distance selon type de sport"""
+# Distance parcourue par type de sport ###############################################################
+df_grouped = df_filtered.groupby("type", as_index=False).agg(
+    distance=("distance", "sum")
+)
+df_grouped["distance_label"] = df_grouped["distance"].round(1).astype(str) + " km"
 
 fig = px.bar(
-    df_filtered,
+    df_grouped,
     x="type",
     y="distance",
-    title="Distance parcourue par type de sport",
-    labels={"type": "Type de sport", "distance": "Distance parcourue (km)"},
+    title="Distance totale parcourue par type de sport",
+    color="type",
+    color_discrete_sequence=px.colors.qualitative.Vivid,
+    labels={"type": "Type de sport", "distance": "Distance totale (km)"},
+    text="distance_label",  # 👈 ici
 )
-st.subheader("Distance parcourue par type de sport")
+
+fig.update_traces(textposition="outside")
+fig.update_layout(
+    uniformtext_minsize=8,
+    uniformtext_mode="hide",
+    margin=dict(t=50, b=50, l=40, r=40),
+    height=600,
+    width=1200,
+)
+st.subheader("Distance totale parcourue par type de sport")
 st.plotly_chart(fig, use_container_width=True)
+
+# Durée d'activité par type de sport ###############################################################
+# 1. Formatage de la durée (optionnel, utilisé pour label hover si besoin)
+df_filtered["duration_formatted"] = df_filtered["duration_seconds"].map(
+    format_duration_hhmmss
+)
+
+# 2. Regroupement par type et somme des secondes
+df_grouped = df_filtered.groupby("type", as_index=False).agg(
+    duration_seconds=("duration_seconds", "sum")
+)
+df_grouped["duration_hours"] = df_grouped["duration_seconds"] / 3600
+
+
+# 3. Générer labels hh:mm pour annotation
+def hours_to_hhmm(hours):
+    h = int(hours)
+    m = int((hours - h) * 60)
+    return f"{h:02d}:{m:02d}"
+
+
+df_grouped["label_hhmm"] = df_grouped["duration_hours"].apply(hours_to_hhmm)
+
+# 4. Créer le bar plot
+fig = px.bar(
+    df_grouped,
+    x="type",
+    y="duration_hours",
+    labels={"duration_hours": "Durée totale (heures)", "type": "Type de sport"},
+    color="type",
+    color_discrete_sequence=px.colors.qualitative.Vivid,
+    title="Durée totale d'activité par type de sport",
+)
+
+# 5. Ajouter les labels hh:mm au-dessus des barres
+fig.update_traces(text=df_grouped["label_hhmm"], textposition="outside")
+
+
+fig.update_layout(
+    yaxis_title="Durée totale (heures)",
+    uniformtext_minsize=8,
+    uniformtext_mode="hide",
+    margin=dict(t=50, b=50, l=40, r=40),
+    height=600,
+    width=1200,
+)
+
+st.plotly_chart(fig, use_container_width=False)
