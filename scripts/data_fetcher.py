@@ -25,7 +25,9 @@ def convert_seconds_to_hhmmss(seconds):
 
 
 def clean_basics(df):
-    df["type"] = df["type"].apply(lambda x: x.get("typeKey"))
+    df["type"] = df["type"].apply(
+        lambda x: x.get("typeKey") if isinstance(x, dict) else x
+    )
     df["distance"] = round(df["distance_meters"] / 1000, 2)
     df["duration_hhmmss"] = df["duration_seconds"].apply(convert_seconds_to_hhmmss)
     df["speed_kmh"] = round(df["avg_speed_mps"] * 3.6, 2)
@@ -36,7 +38,7 @@ def clean_basics(df):
     return df
 
 
-def activity_basics():
+def activity_basics(client):
     client = (
         gc.connect_to_garmin()
     )  # Connect to Garmin Connect using the function from garmin_connect.py

@@ -6,7 +6,7 @@ from garminconnect import GarminConnectConnectionError
 load_dotenv()  # Load environment variables from .env file
 
 
-def connect_to_garmin():
+def connect_to_garmin(EMAIL=None, PASSWORD=None):
     """
     Fonction principale qui établit la connexion au compte Garmin Connect
     en utilisant les identifiants stockés dans les variables d’environnement.
