@@ -6,3 +6,5 @@ roadmap.docx
 *.pbix
 *.csv
 *.duckdb
+*.parquet
+*.toml

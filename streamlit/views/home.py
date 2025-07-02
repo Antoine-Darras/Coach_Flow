@@ -33,14 +33,23 @@ if st.button("Let's go !"):
     client = fs.connect_streamlit_garmin(EMAIL, PASSWORD)
 
     if client:
-        st.success("Connexion réussie à Garmin !")
-        df_activities = pl.pipeline(client)
-
-        df_clean = df_activities.data_fetcher.clean_basics(df_activities)
-        last_activity = df_clean.sort_values("start_date", ascending=False).iloc[0]
+        df = pl.pipeline()
+        last_activity = (
+            df[["start_date", "type", "duration_hhmmss", "distance_km", "allure"]]
+            .sort_values("start_date", ascending=False)
+            .head(5)
+            .rename(
+                columns={
+                    "start_date": "Date",
+                    "type": "Type d'activité",
+                    "duration_hhmmss": "Durée (hh:mm:ss)",
+                    "distance_km": "Distance (km)",
+                }
+            )
+        )
 
         st.write("---")
-        st.subheader("Bravo pour ta dernière activité ! 👏💪")
+        st.subheader("Bravo pour tes dernières activités ! 👏💪")
         st.write(last_activity)
 
     else:

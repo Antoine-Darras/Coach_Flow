@@ -1,20 +1,7 @@
 import pandas as pd
 import garmin_connect as gc
-
-
-def avg_speed_mps_to_pace_min_per_km(speed_mps):
-    """
-    Convertit une vitesse en m/s en allure min/km.
-    Renvoie une chaîne 'mm:ss' ou None si vitesse nulle, None ou NaN.
-    """
-    if speed_mps is None or pd.isna(speed_mps) or speed_mps == 0:
-        return None
-
-    speed_kmh = speed_mps * 3.6
-    total_minutes = 60 / speed_kmh
-    minutes = int(total_minutes)
-    seconds = int(round((total_minutes - minutes) * 60))
-    return f"{minutes:02d}:{seconds:02d}"
+import numpy as np
+import math
 
 
 def convert_seconds_to_hhmmss(seconds):
@@ -24,36 +11,100 @@ def convert_seconds_to_hhmmss(seconds):
     return f"{int(hours):02}:{int(minutes):02}:{int(seconds):02}"
 
 
+def safe_format_pace(x):
+    # On logue les valeurs problématiques
+    if x is None or pd.isna(x) or math.isinf(x) or x <= 0:
+        print(f"Valeur pace_min_per_km problématique détectée : {x}")
+        return None
+    try:
+        minutes = int(x)
+        seconds = int(round((x - minutes) * 60))
+        if seconds == 60:
+            minutes += 1
+            seconds = 0
+        return f"{minutes}:{seconds:02d} min/km"
+    except Exception as e:
+        print(f"Erreur inattendue sur pace {x}: {e}")
+        return None
+
+
+def format_pace(pace_float):
+    try:
+        if (
+            pace_float is None
+            or pd.isna(pace_float)
+            or np.isinf(pace_float)
+            or pace_float <= 0
+        ):
+            return None
+        minutes = int(pace_float)
+        seconds = int(round((pace_float - minutes) * 60))
+        if seconds == 60:
+            minutes += 1
+            seconds = 0
+        return f"{minutes}:{seconds:02d} min/km"
+    except Exception as e:
+        print(f"[format_pace] Erreur sur valeur {pace_float}: {e}")
+        return None
+
+
 def clean_basics(df):
     df["type"] = df["type"].apply(
         lambda x: x.get("typeKey") if isinstance(x, dict) else x
     )
-    df["distance"] = round(df["distance_meters"] / 1000, 2)
+
+    # Distance en km, arrondi correct
+    df["distance_km"] = (df["distance_meters"] / 1000).round(2)
+
     df["duration_hhmmss"] = df["duration_seconds"].apply(convert_seconds_to_hhmmss)
     df["speed_kmh"] = round(df["avg_speed_mps"] * 3.6, 2)
+    df["duration_min"] = df["duration_seconds"] / 60
+
+    min_distance_km = 0.001  # Seuil pour éviter division par zéro
+    df["pace_min_per_km"] = np.where(
+        df["distance_km"] >= min_distance_km,
+        df["duration_min"] / df["distance_km"],
+        np.nan,
+    )
+    df["pace_min_per_km"] = pd.to_numeric(df["pace_min_per_km"], errors="coerce")
+    df.loc[np.isinf(df["pace_min_per_km"]), "pace_min_per_km"] = np.nan
+    print("Valeurs infinies restantes :")
+    print(df[df["pace_min_per_km"] == np.inf])
+    df["allure"] = df["pace_min_per_km"].apply(format_pace)
+    df["pace_min_per_km"] = pd.to_numeric(df["pace_min_per_km"], errors="coerce")
+    df.loc[np.isinf(df["pace_min_per_km"]), "pace_min_per_km"] = np.nan
+
+    print("Valeurs infinies après calcul pace_min_per_km :")
+    print(
+        df.loc[
+            np.isinf(df["pace_min_per_km"]),
+            ["distance_km", "duration_min", "pace_min_per_km"],
+        ]
+    )
+
     df["start_time"] = pd.to_datetime(df["start_time"])
     df["start_date"] = df["start_time"].dt.date
     df["start_time"] = df["start_time"].dt.time
-    df["allure"] = df["avg_speed_mps"].apply(avg_speed_mps_to_pace_min_per_km)
+
     return df
 
 
-def activity_basics(client):
-    client = (
-        gc.connect_to_garmin()
-    )  # Connect to Garmin Connect using the function from garmin_connect.py
+def get_and_clean_activities():
+    client = gc.connect_to_garmin()
+    if client is None:
+        raise ValueError("Connexion à Garmin Connect échouée.")
     activities = client.get_activities(0, 1000)
-    data = []  # Initialize an empty list to store activity data
+    data = []
     for activity in activities:
         data.append(
             {
-                "activityId": activity["activityId"],
-                "activityName": activity["activityName"],
-                "activityType": activity["activityType"],
+                "activityId": activity.get("activityId"),
+                "activityName": activity.get("activityName"),
+                "activityType": activity.get("activityType"),
                 "distance": activity.get("distance"),
-                "duration": activity["duration"],
+                "duration": activity.get("duration"),
                 "averageSpeed": activity.get("averageSpeed"),
-                "startTimeLocal": activity["startTimeLocal"],
+                "startTimeLocal": activity.get("startTimeLocal"),
                 "calories": activity.get("calories"),
                 "startLatitude": activity.get("startLatitude"),
                 "startLongitude": activity.get("startLongitude"),
@@ -64,44 +115,62 @@ def activity_basics(client):
             }
         )
 
-    df = pd.DataFrame(data)  # Convert the list of dictionaries to a DataFrame
-    df = df.rename(
-        columns={
-            "activityId": "id",
-            "activityName": "name",
-            "activityType": "type",
-            "distance": "distance_meters",
-            "duration": "duration_seconds",
-            "averageSpeed": "avg_speed_mps",
-            "startTimeLocal": "start_time",
-            "calories": "calories_burned" if "calories" in data[0] else None,
-            "startLatitude": "start_latitude",
-            "startLongitude": "start_longitude",
-            "elevationGain": "elevation_gain",
-            "elevationLoss": "elevation_loss",
-            "averageHR": "avg_heart_rate",
-            "maxHR": "max_heart_rate",
-        }
-    )
-    df.sort_values(
-        by="start_time", ascending=False, inplace=True
-    )  # Sort by start time in descending order
-    df.reset_index(drop=True, inplace=True)  # Reset the index of the DataFrame
+    df = pd.DataFrame(data)
+
+    rename_map = {
+        "activityId": "id",
+        "activityName": "name",
+        "activityType": "type",
+        "distance": "distance_meters",
+        "duration": "duration_seconds",
+        "averageSpeed": "avg_speed_mps",
+        "startTimeLocal": "start_time",
+        "startLatitude": "start_latitude",
+        "startLongitude": "start_longitude",
+        "elevationGain": "elevation_gain",
+        "elevationLoss": "elevation_loss",
+        "averageHR": "avg_heart_rate",
+        "maxHR": "max_heart_rate",
+    }
+
+    # Si la colonne "calories" existe dans df, on l'ajoute au renommage
+    if "calories" in df.columns:
+        rename_map["calories"] = "calories_burned"
+
+    df = df.rename(columns=rename_map)
+
+    # Convertir les colonnes numériques au bon type
+    numeric_cols = [
+        "distance_meters",
+        "duration_seconds",
+        "avg_speed_mps",
+        "calories_burned" if "calories_burned" in df.columns else None,
+        "start_latitude",
+        "start_longitude",
+        "elevation_gain",
+        "elevation_loss",
+        "avg_heart_rate",
+        "max_heart_rate",
+    ]
+    numeric_cols = [col for col in numeric_cols if col is not None]
+
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    df.sort_values(by="start_time", ascending=False, inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
     df = clean_basics(df)
-    return df  # Return the cleaned DataFrame with activity basics
+
+    return df
 
 
-if (
-    __name__ == "__main__"
-):  # If this script is run directly, execute the activity_basics function
-    df = activity_basics()  # Call the function to fetch activity data
-    if df is not None:
+if __name__ == "__main__":
+    df = get_and_clean_activities()
+    if df is not None and not df.empty:
         print("Activités récupérées avec succès.")
-        print(df.head())  # Affiche les 5 premières lignes du DataFrame
-        print(df.info())  # Affiche les informations du DataFrame
-        print(
-            df["start_time"].min(), df["start_time"].max()
-        )  # Affiche la date min et max
-
+        print(df.head())
+        print(df.info())
+        print(df["start_time"].min(), df["start_time"].max())
     else:
         print("Aucune activité récupérée.")

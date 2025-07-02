@@ -1,10 +1,19 @@
 import streamlit as st
 
-st.set_page_config(page_title="Coach_Flow 🏊‍♂️🚴🏃‍➡️")
+# **Page Config**
+accueil = st.Page(page="views/home.py", title="Accueil", icon="👟", default=True)
 
-st.title("Bienvenue sur Coach_Flow ! 🏊‍♂️🚴🏃‍➡️")
+perf = st.Page(page="views/performance.py", title="Analyse des performances", icon="📈")
 
-st.write(
-    "Utilise la barre latérale pour naviguer entre les différentes pages de l'application."
+coach = st.Page(
+    page="views/recommandation.py", title="Les conseils du coach", icon="🧑‍🏫"
 )
-st.write("Gardes un oeil sur tes performances et demande de l'aide à ton coach(flow) !")
+
+map = st.Page(page="views/map.py", title="Cartographie des activités", icon="🗺️")
+
+# **Navigation setup**
+
+
+pg = st.navigation(pages=[accueil, perf, coach, map])
+
+pg.run()

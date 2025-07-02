@@ -6,25 +6,20 @@ import duckdb
 from dotenv import load_dotenv
 
 
-def pipeline(client):
-    df = data_fetcher.activity_basics(client)
-    os.makedirs("data/processed", exist_ok=True)
-    con = duckdb.connect("data/processed/coachflow.duckdb")
-    con.execute("CREATE OR REPLACE TABLE activities AS SELECT * FROM df")
-    df.to_csv("data/processed/activities.csv", index=False)
+def pipeline():
+    df = data_fetcher.get_and_clean_activities()
+    df.to_parquet("data/processed/activities.parquet")
     return df
 
 
 if __name__ == "__main__":
-    # Pour test en local, il faut d'abord créer le client Garmin
-
-    client = gc.connect_to_garmin()
-    if client:
-        df = pipeline(client)
+    try:
+        df = pipeline()
         if df is not None:
             print("Pipeline complet exécuté avec succès.")
             print(df.head())
         else:
             print("Erreur dans la pipeline.")
-    else:
-        print("Connexion Garmin échouée.")
+    except Exception as e:
+        print("Une erreur est survenue lors de l’exécution de la pipeline :")
+        print(e)

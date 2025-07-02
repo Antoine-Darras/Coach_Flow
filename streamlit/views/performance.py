@@ -25,9 +25,8 @@ def format_duration_hhmmss(duration):
 
 ##############################################################################
 
-# import d'un faux df pour le test
-df = pd.read_csv("data/fake_activity_data.csv")
-df["start_date"] = pd.to_datetime(df["start_date"])
+
+df = pd.read_parquet("data/processed/activities.parquet")
 
 st.set_page_config("Analyse de tes performances", "📈", "wide")
 st.title("Analyse de tes performances 📈")
@@ -35,6 +34,8 @@ st.write(
     "Cette page te permet de visualiser et d'analyser tes performances sportives. Tu peux filtrer les activités par type, date et distance, et afficher des statistiques sur tes performances."
 )
 st.write("---")
+
+
 # Charger les données
 
 
@@ -44,14 +45,13 @@ with st.sidebar:
     show_all = st.checkbox("Toutes mes activités", value=False)
 
     if show_all:
-        # Si la case est cochée, prendre toute la période
-        start_date = df["start_date"].min().date()
-        end_date = df["start_date"].max().date()
+        start_date = df["start_date"].min()
+        end_date = df["start_date"].max()
     else:
         start_date, end_date = st.date_input(
             "Choisis une plage de dates",
             value=(
-                df["start_date"].min().date(),  # Convertit Timestamp en date
+                df["start_date"].min(),
                 date.today(),
             ),
         )
@@ -69,37 +69,60 @@ with st.sidebar:
 
 df_filtered = df[
     (df["type"].isin(sports_selected))
-    & (df["start_date"].dt.date >= start_date)
-    & (df["start_date"].dt.date <= end_date)
+    & (df["start_date"] >= start_date)
+    & (df["start_date"] <= end_date)
 ]
 
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.subheader("Nombre d'activités")
     st.metric("Total", len(df_filtered))
+    st.write("---")
+    st.subheader("Nombre d'activités par sport")
+    activities_per_sport = df_filtered["type"].value_counts()
+    st.bar_chart(activities_per_sport, use_container_width=True)
+
 with col2:
     st.subheader("Distance totale")
-    total_distance = df_filtered["distance"].sum()
+    total_distance = df_filtered["distance_km"].sum()
     st.metric("Total", f"{total_distance:.2f} km")
+    st.write("---")
     st.subheader("Distance moyenne par sortie")
-    avg_distance = df_filtered["distance"].mean()
+    avg_distance = df_filtered["distance_km"].mean()
     st.metric("Moyenne", f"{avg_distance:.2f} km")
+    st.write("---")
+    st.subheader("FC moyenne")
+    avg_heart_rate = df_filtered["avg_heart_rate"].mean()
+    if pd.notna(avg_heart_rate):
+        st.metric("Moyenne", f"{avg_heart_rate:.0f} bpm")
 with col3:
     st.subheader("Durée totale")
     total_duration = df_filtered["duration_seconds"].sum()
     total_duration_str = format_duration_hhmmss(total_duration)
     st.metric("Total", total_duration_str)
-
+    st.write("---")
     st.subheader("Durée moyenne par sortie")
     avg_duration = df_filtered["duration_seconds"].mean()
     avg_duration_str = format_duration_hhmmss(avg_duration)
     st.metric("Moyenne", avg_duration_str)
+    st.write("---")
+
+
+with col4:
+    st.subheader("Dénivelé positif total")
+    total_elevation = df_filtered["elevation_gain"].sum()
+    st.metric("Total", f"{total_elevation:.2f} m")
+    st.write("---")
+    st.subheader("Total de calories brulées")
+    total_calories = df_filtered["calories_burned"].sum()
+    st.metric("Total", f"{total_calories:.2f} kcal")
+    st.write("---")
 
 ###################################################################################################################################
 # Visualisation des performances
-
+df_filtered["start_date"] = pd.to_datetime(df_filtered["start_date"])
 df_weekly = (
     df_filtered.set_index("start_date")
     .resample("W")  # 'W' = weekly, fin de semaine (dimanche)
@@ -109,10 +132,10 @@ df_weekly = (
 fig = px.line(
     df_weekly,
     x="start_date",
-    y="distance",
+    y="distance_km",
     markers=True,
     title="Durée totale d'activité par semaine",
-    labels={"start_date": "Semaine", "distance": "Durée (heures)"},
+    labels={"start_date": "Semaine", "distance_km": "Durée (heures)"},
 )
 
 st.subheader("Distance parcourue au fil du temps")
@@ -144,18 +167,18 @@ st.subheader("Durée d'activité au fil du temps")
 st.plotly_chart(fig, use_container_width=True)
 # Distance parcourue par type de sport ###############################################################
 df_grouped = df_filtered.groupby("type", as_index=False).agg(
-    distance=("distance", "sum")
+    distance_km=("distance_km", "sum")
 )
-df_grouped["distance_label"] = df_grouped["distance"].round(1).astype(str) + " km"
+df_grouped["distance_label"] = df_grouped["distance_km"].round(1).astype(str) + " km"
 
 fig = px.bar(
     df_grouped,
     x="type",
-    y="distance",
+    y="distance_km",
     title="Distance totale parcourue par type de sport",
     color="type",
     color_discrete_sequence=px.colors.qualitative.Vivid,
-    labels={"type": "Type de sport", "distance": "Distance totale (km)"},
+    labels={"type": "Type de sport", "distance_km": "Distance totale (km)"},
     text="distance_label",  # 👈 ici
 )
 
