@@ -1,7 +1,7 @@
 🧠 CoachFlow – Analyse & Recommandation Sportive Personnalisée
 CoachFlow est une application interactive développée en Python avec Streamlit. Elle permet d'analyser automatiquement vos activités sportives issues de Garmin et de recevoir des recommandations personnalisées basées sur vos données récentes.
 
-🚀 Fonctionnalités
+## 🚀 Fonctionnalités
 
 📥 Importation automatique des activités Garmin
 🧹 Nettoyage & enrichissement des données (distance, vitesse, durée, type…)
@@ -11,7 +11,7 @@ CoachFlow est une application interactive développée en Python avec Streamlit.
 🔐 Authentification utilisateur (à venir)
 
 
-🛠️ Stack technique
+## 🛠️ Stack technique
 
 Python
 Streamlit – Interface utilisateur
@@ -22,8 +22,10 @@ uv – Gestionnaire de paquets moderne
 pyproject.toml – Configuration des dépendances
 Garmin Connect
 
+## 📂 Structure du projet
 
-📂 Structure du projet
+
+```
 Coach_Flow/
 │
 ├── data/                        # Données brutes et nettoyées
@@ -43,8 +45,9 @@ Coach_Flow/
 ├── pyproject.toml               # Configuration des dépendances (gérée avec uv)
 ├── uv.lock                      # Verrouillage des versions
 └── README.md
+```
 
-⚙️ Installation
+## ⚙️ Installation
 1. Clonez le repo :
 bashgit clone https://github.com/Antoine-Darras/Coach_Flow.git
 cd Coach_Flow
