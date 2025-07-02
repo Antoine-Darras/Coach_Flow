@@ -2,7 +2,7 @@ __py__cache__/
 .venv/
 .env
 *.ipynb
-roadmap.docx
+*.docx
 *.pbix
 *.csv
 *.duckdb
