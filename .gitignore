@@ -7,4 +7,4 @@ __py__cache__/
 *.csv
 *.duckdb
 *.parquet
-*.toml
+secrets.toml
