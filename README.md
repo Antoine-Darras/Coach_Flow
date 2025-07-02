@@ -49,16 +49,16 @@ Coach_Flow/
 
 ## ⚙️ Installation
 1. Clonez le repo :
-bashgit clone https://github.com/Antoine-Darras/Coach_Flow.git
+git clone https://github.com/Antoine-Darras/Coach_Flow.git
 cd Coach_Flow
 
 2. Créez et activez un environnement virtuel :
-bashpython -m venv .venv
+python -m venv .venv
 source .venv/bin/activate        # Linux/macOS
 .venv\Scripts\activate           # Windows
 
 3. Installez les dépendances avec uv :
-bashuv sync
+uv sync
 
 4. Lancez l'application :
-bashstreamlit run streamlit/app.py
+streamlit run streamlit/app.py
