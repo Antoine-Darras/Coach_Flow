@@ -13,7 +13,6 @@ CoachFlow est une application interactive développée en Python avec Streamlit.
 - 🗺️ Carte interactive centrée sur votre dernière activité (via Folium)
 - 📈 Tableau de bord de vos dernières activités (via Plotly)
 - 🧠 Page "Les conseils du coach" : chatbot IA (via Gemini) avec recommandations personnalisées
-- 🔐 Authentification utilisateur *(à venir)*
 
 ---
 
@@ -70,7 +69,6 @@ Copiez cette clé dans un fichier .streamlit/secrets.toml :
 ```
 # .streamlit/secrets.toml
 gemini_api_key = "votre_clé_API_Gemini"
-
 ```
 💡 Un exemple de structure vous est fourni dans .streamlit/secrets.example.toml.
 
@@ -78,16 +76,22 @@ gemini_api_key = "votre_clé_API_Gemini"
 
 ## ⚙️ Installation
 1. Clonez le repo :
+```
 git clone https://github.com/Antoine-Darras/Coach_Flow.git
 cd Coach_Flow
-
+```
 2. Créez et activez un environnement virtuel :
+```
 python -m venv .venv
 source .venv/bin/activate        # Linux/macOS
 .venv\Scripts\activate           # Windows
+```
 
 3. Installez les dépendances avec uv :
+```
 uv sync
-
+```
 4. Lancez l'application :
+```
 streamlit run streamlit/app.py
+```
